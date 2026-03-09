@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CustomerWithStats } from '@/types/customer';
+import { formatCustomerId, calculateAge, getStatusColor } from '@/lib/utils';
+import { handleError, showConfirm } from '@/lib/errorHandler';
 
 export default function HomePage() {
   const [customers, setCustomers] = useState<CustomerWithStats[]>([]);
@@ -20,20 +22,17 @@ export default function HomePage() {
     try {
       const res = await fetch('/api/customers');
       if (!res.ok) {
-        console.error('Failed to fetch customers:', res.statusText);
-        setCustomers([]);
-        return;
+        throw new Error('获取客户列表失败');
       }
       const data = await res.json();
       // 确保返回的是数组
       if (Array.isArray(data)) {
         setCustomers(data);
       } else {
-        console.error('Unexpected data format:', data);
-        setCustomers([]);
+        throw new Error('数据格式错误');
       }
     } catch (error) {
-      console.error('Failed to fetch customers:', error);
+      handleError(error, { fallbackMessage: '获取客户列表失败', showAlert: false });
       setCustomers([]);
     } finally {
       setLoading(false);
@@ -54,9 +53,7 @@ export default function HomePage() {
     fetch(`/api/customers?search=${encodeURIComponent(searchTerm)}`)
       .then(res => {
         if (!res.ok) {
-          console.error('Failed to search customers:', res.statusText);
-          setCustomers([]);
-          return;
+          throw new Error('搜索失败');
         }
         return res.json();
       })
@@ -64,12 +61,11 @@ export default function HomePage() {
         if (Array.isArray(data)) {
           setCustomers(data);
         } else {
-          console.error('Unexpected data format:', data);
-          setCustomers([]);
+          throw new Error('数据格式错误');
         }
       })
       .catch(error => {
-        console.error('Failed to search customers:', error);
+        handleError(error, { fallbackMessage: '搜索客户失败', showAlert: false });
         setCustomers([]);
       });
   }
@@ -95,34 +91,18 @@ export default function HomePage() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm('确定要删除此客户吗？此操作不可恢复，且会删除所有相关互动记录。')) {
+    if (!showConfirm('确定要删除此客户吗？此操作不可恢复，且会删除所有相关互动记录。')) {
       return;
     }
 
     try {
-      await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error('删除失败');
+      }
       fetchCustomers();
-      fetchStats();
     } catch (error) {
-      console.error('Failed to delete customer:', error);
-      alert('删除失败');
-    }
-  }
-
-  function getStatusColor(status: string) {
-    switch (status) {
-      case '刚成交':
-        return 'bg-blue-100 text-blue-800';
-      case '跟踪中':
-        return 'bg-yellow-100 text-yellow-800';
-      case '已见面':
-        return 'bg-green-100 text-green-800';
-      case '已约平台':
-        return 'bg-purple-100 text-purple-800';
-      case '新客户':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      handleError(error, { fallbackMessage: '删除客户失败' });
     }
   }
 
@@ -141,22 +121,6 @@ export default function HomePage() {
 
     return true;
   });
-
-  function formatCustomerId(id: number): string {
-    return `#${String(id).padStart(3, '0')}`;
-  }
-
-  function calculateAge(birthday: string | null): number {
-    if (!birthday) return 0;
-    const birthDate = new Date(birthday);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  }
 
   if (loading) {
     return (

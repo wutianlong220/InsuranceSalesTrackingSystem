@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { formatCustomerId } from '@/lib/utils';
 
 interface Customer {
   id: number;
@@ -44,10 +45,6 @@ export default function NewCustomerPage() {
     }
   }
 
-  function formatCustomerId(id: number): string {
-    return `#${String(id).padStart(3, '0')}`;
-  }
-
   const filteredCustomers = allCustomers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone?.includes(searchTerm) ||
@@ -83,7 +80,15 @@ export default function NewCustomerPage() {
         const customer = await res.json();
         router.push(`/customers/${customer.id}`);
       } else {
-        alert('创建失败');
+        // 尝试解析错误信息
+        const errorData = await res.json().catch(() => ({ error: '创建失败' }));
+
+        // 显示具体的错误信息
+        if (errorData.error) {
+          alert(errorData.error);
+        } else {
+          alert('创建失败');
+        }
       }
     } catch (error) {
       console.error('Failed to create customer:', error);
@@ -239,27 +244,50 @@ export default function NewCustomerPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   搜索推荐人 <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="输入姓名或手机号搜索..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
-                />
-                <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto">
-                  {filteredCustomers.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500">未找到匹配的客户</div>
-                  ) : (
-                    filteredCustomers.map((customer) => (
-                      <div
-                        key={customer.id}
-                        onClick={() => {
-                          setSelectedReferrer(customer.id.toString());
-                          setSearchTerm(`${formatCustomerId(customer.id)} ${customer.name}`);
-                        }}
-                        className={`px-4 py-3 border-b border-gray-200 cursor-pointer hover:bg-blue-50 ${
-                          selectedReferrer === customer.id.toString() ? 'bg-blue-100' : ''
-                        }`}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="输入姓名或手机号搜索..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      setSearchTerm(newValue);
+                      // 如果用户修改了搜索框内容，清除之前选择的推荐人
+                      if (selectedReferrer && newValue !== searchTerm) {
+                        setSelectedReferrer('');
+                      }
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {selectedReferrer && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedReferrer('');
+                        setSearchTerm('');
+                      }}
+                      className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 underline"
+                    >
+                      清除
+                    </button>
+                  )}
+                </div>
+                {/* 只在搜索中且没有选择推荐人时显示搜索结果 */}
+                {searchTerm && !selectedReferrer && (
+                  <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto">
+                    {filteredCustomers.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500">未找到匹配的客户</div>
+                    ) : (
+                      filteredCustomers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          onClick={() => {
+                            setSelectedReferrer(customer.id.toString());
+                            setSearchTerm(`${formatCustomerId(customer.id)} ${customer.name}`);
+                          }}
+                          className={`px-4 py-3 border-b border-gray-200 cursor-pointer hover:bg-blue-50 ${
+                            selectedReferrer === customer.id.toString() ? 'bg-blue-100' : ''
+                          }`}
                       >
                         <div className="font-medium text-gray-900">
                           {formatCustomerId(customer.id)} {customer.name}
@@ -271,6 +299,7 @@ export default function NewCustomerPage() {
                     ))
                   )}
                 </div>
+                )}
                 <input
                   type="hidden"
                   name="was_referred_by"

@@ -4,7 +4,14 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-export async function query(text: string, params?: any[]) {
+export interface QueryResult<T = any> {
+  rows: T[];
+  rowCount: number | null;
+  command: string;
+  fields: any[];
+}
+
+export async function query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
   const start = Date.now();
   try {
     const res = await pool.query(text, params);

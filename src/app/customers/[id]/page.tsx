@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CustomerWithStats } from '@/types/customer';
 import { Interaction } from '@/types/interaction';
+import { formatCustomerId, calculateAge, getInteractionTypeColor } from '@/lib/utils';
+import { handleError, showConfirm } from '@/lib/errorHandler';
 
 export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [id, setId] = useState<string>('');
@@ -24,10 +26,13 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   async function fetchCustomer(customerId: string) {
     try {
       const res = await fetch(`/api/customers/${customerId}`);
+      if (!res.ok) {
+        throw new Error('获取客户信息失败');
+      }
       const data = await res.json();
       setCustomer(data);
     } catch (error) {
-      console.error('Failed to fetch customer:', error);
+      handleError(error, { fallbackMessage: '获取客户信息失败', showAlert: false });
     }
   }
 
@@ -35,20 +40,17 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     try {
       const res = await fetch(`/api/customers/${customerId}/interactions`);
       if (!res.ok) {
-        console.error('Failed to fetch interactions:', res.statusText);
-        setInteractions([]);
-        return;
+        throw new Error('获取互动记录失败');
       }
       const data = await res.json();
       // 确保返回的是数组
       if (Array.isArray(data)) {
         setInteractions(data);
       } else {
-        console.error('Unexpected data format:', data);
-        setInteractions([]);
+        throw new Error('数据格式错误');
       }
     } catch (error) {
-      console.error('Failed to fetch interactions:', error);
+      handleError(error, { fallbackMessage: '获取互动记录失败', showAlert: false });
       setInteractions([]);
     } finally {
       setLoading(false);
@@ -56,48 +58,35 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   }
 
   async function handleDelete() {
-    if (!confirm('确定要删除此客户吗？此操作不可恢复，且会删除所有相关互动记录。')) {
+    if (!showConfirm('确定要删除此客户吗？此操作不可恢复，且会删除所有相关互动记录。')) {
       return;
     }
 
     try {
-      await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error('删除失败');
+      }
       window.location.href = '/';
     } catch (error) {
-      console.error('Failed to delete customer:', error);
-      alert('删除失败');
+      handleError(error, { fallbackMessage: '删除客户失败' });
     }
   }
 
   async function handleDeleteInteraction(interactionId: number) {
-    if (!confirm('确定要删除这条记录吗？')) {
+    if (!showConfirm('确定要删除这条记录吗？')) {
       return;
     }
 
     try {
-      await fetch(`/api/interactions/${interactionId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/interactions/${interactionId}`, { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error('删除失败');
+      }
       fetchInteractions(id!);
       fetchCustomer(id!);
     } catch (error) {
-      console.error('Failed to delete interaction:', error);
-      alert('删除失败');
-    }
-  }
-
-  function getInteractionTypeColor(type: string) {
-    switch (type) {
-      case 'call':
-        return 'bg-blue-100 text-blue-800';
-      case 'wechat':
-        return 'bg-green-100 text-green-800';
-      case 'meet':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'platform':
-        return 'bg-purple-100 text-purple-800';
-      case 'deal':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      handleError(error, { fallbackMessage: '删除记录失败' });
     }
   }
 
@@ -110,22 +99,6 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       deal: '成交',
     };
     return labels[type as keyof typeof labels] || type;
-  }
-
-  function formatCustomerId(id: number): string {
-    return `#${String(id).padStart(3, '0')}`;
-  }
-
-  function calculateAge(birthday: string | null): number {
-    if (!birthday) return 0;
-    const birthDate = new Date(birthday);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
   }
 
   function formatDate(date: string | null): string {

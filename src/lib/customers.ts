@@ -1,5 +1,6 @@
 import { query } from './db';
 import { Customer, CreateCustomerInput, UpdateCustomerInput, CustomerWithStats } from '@/types/customer';
+import { getStatusFromInteraction } from '@/constants/statusMapping';
 
 // 统一格式化customer数据，确保日期字段始终是 YYYY-MM-DD 格式
 function formatCustomerData(customer: any): Customer {
@@ -110,29 +111,7 @@ export async function getCustomerWithStats(id: number): Promise<CustomerWithStat
 
   const customer = result.rows[0];
   const deal_count = parseInt(customer.deal_count) || 0;
-
-  // 计算状态
-  let status = '新客户';
-  if (customer.last_interaction_type) {
-    switch (customer.last_interaction_type) {
-      case 'deal':
-        status = '刚成交';
-        break;
-      case 'call':
-      case 'wechat':
-      case 'referral':
-        status = '跟踪中';
-        break;
-      case 'meet':
-        status = '已见面';
-        break;
-      case 'platform':
-        status = '已约平台';
-        break;
-      default:
-        status = '新客户';
-    }
-  }
+  const status = getStatusFromInteraction(customer.last_interaction_type);
 
   return {
     ...formatCustomerData(customer),
@@ -154,28 +133,7 @@ export async function getAllCustomersWithStats(): Promise<CustomerWithStats[]> {
 
   return result.rows.map((customer: any) => {
     const deal_count = parseInt(customer.deal_count) || 0;
-
-    let status = '新客户';
-    if (customer.last_interaction_type) {
-      switch (customer.last_interaction_type) {
-        case 'deal':
-          status = '刚成交';
-          break;
-        case 'call':
-        case 'wechat':
-        case 'referral':
-          status = '跟踪中';
-          break;
-        case 'meet':
-          status = '已见面';
-          break;
-        case 'platform':
-          status = '已约平台';
-          break;
-        default:
-          status = '新客户';
-      }
-    }
+    const status = getStatusFromInteraction(customer.last_interaction_type);
 
     return {
       ...formatCustomerData(customer),
