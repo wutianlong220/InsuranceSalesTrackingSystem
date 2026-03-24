@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Filter, Edit, Trash2, Eye, Phone, Mail } from 'lucide-react';
+import { Search, Plus, Filter, Edit, Trash2, Eye, Phone } from 'lucide-react';
 
 export default function HomePage() {
   const [customers, setCustomers] = useState<CustomerWithStats[]>([]);
@@ -127,7 +127,8 @@ export default function HomePage() {
     total: customers.length,
     newCustomers: customers.filter(c => c.status === '新客户').length,
     tracking: customers.filter(c => c.status === '跟踪中').length,
-    deals: customers.filter(c => c.status === '刚成交').length,
+    dealCustomers: customers.filter(c => c.deal_count > 0).length, // 已成交客户数
+    dealOrders: customers.reduce((sum, c) => sum + (c.deal_count || 0), 0), // 已成交订单数
   };
 
   function getStatusBadgeVariant(status: string): "default" | "success" | "warning" | "destructive" | "outline" | "secondary" {
@@ -171,7 +172,7 @@ export default function HomePage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
@@ -214,13 +215,26 @@ export default function HomePage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              已成交
+              已成交客户数
             </CardTitle>
             <CheckCircle className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{stats.deals}</div>
-            <p className="mt-1 text-xs text-gray-500">成功成交</p>
+            <div className="text-3xl font-bold text-green-600">{stats.dealCustomers}</div>
+            <p className="mt-1 text-xs text-gray-500">成交客户</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              已成交订单数
+            </CardTitle>
+            <CheckCircle className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600">{stats.dealOrders}</div>
+            <p className="mt-1 text-xs text-gray-500">成交订单</p>
           </CardContent>
         </Card>
       </div>

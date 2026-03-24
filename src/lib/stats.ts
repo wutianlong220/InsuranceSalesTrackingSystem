@@ -18,7 +18,14 @@ export async function getMonthlyStats(year: number, month: number): Promise<Mont
        (SELECT COUNT(*) FROM interactions WHERE type = 'meet' AND date >= $1 AND date < $2) as visits,
        (SELECT COUNT(*) FROM interactions WHERE type = 'call' AND date >= $1 AND date < $2) as calls,
        (SELECT COUNT(*) FROM interactions WHERE type = 'deal' AND date >= $1 AND date < $2) as deals,
-       (SELECT COUNT(*) FROM customers WHERE created_at >= $1 AND created_at < $2) as new_customers`,
+       (SELECT COUNT(DISTINCT i.customer_id) FROM interactions i
+        WHERE i.date >= $1 AND i.date < $2
+        AND NOT EXISTS (
+          SELECT 1 FROM interactions i2
+          WHERE i2.customer_id = i.customer_id
+          AND i2.date < $1
+        )
+       ) as new_customers`,
     [startDate, endDate]
   );
 

@@ -8,7 +8,13 @@ export const CreateCustomerSchema = z.object({
   gender: z.enum(['male', 'female']).nullable().optional(),
   phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确').nullable().optional(),
   address: z.string().max(500, '地址不能超过500个字符').nullable().optional(),
-  birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '生日格式不正确，应为YYYY-MM-DD').nullable().optional(),
+  birthday: z.string()
+    .transform((val) => val === '' ? null : val)
+    .nullable()
+    .refine((val) => val === null || /^\d{4}-\d{2}-\d{2}$/.test(val || ''), {
+      message: '生日格式不正确，应为YYYY-MM-DD'
+    })
+    .optional(),
   occupation: z.string().max(100, '职业不能超过100个字符').nullable().optional(),
   family_info: z.string().max(500, '家庭情况不能超过500个字符').nullable().optional(),
   source: z.enum(['orphan', 'referral', 'self']),
