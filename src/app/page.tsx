@@ -3,8 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CustomerWithStats } from '@/types/customer';
-import { formatCustomerId, calculateAge, getStatusColor } from '@/lib/utils';
+import { formatCustomerId, calculateAge } from '@/lib/utils';
 import { handleError, showConfirm } from '@/lib/errorHandler';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Search, Plus, Filter, Edit, Trash2, Eye, Phone, Mail } from 'lucide-react';
 
 export default function HomePage() {
   const [customers, setCustomers] = useState<CustomerWithStats[]>([]);
@@ -25,7 +30,6 @@ export default function HomePage() {
         throw new Error('获取客户列表失败');
       }
       const data = await res.json();
-      // 确保返回的是数组
       if (Array.isArray(data)) {
         setCustomers(data);
       } else {
@@ -73,12 +77,10 @@ export default function HomePage() {
   function handleSearchChange(value: string) {
     setSearch(value);
 
-    // 清除之前的定时器
     if (searchTimeoutId) {
       clearTimeout(searchTimeoutId);
     }
 
-    // 设置新的定时器，300ms后执行搜索（防抖）
     const newTimeoutId = setTimeout(() => {
       if (!value) {
         fetchCustomers();
@@ -108,13 +110,11 @@ export default function HomePage() {
 
   // 应用所有筛选条件
   const filteredCustomers = customers.filter((customer) => {
-    // 性别筛选
     if (filterGender !== 'all') {
       if (filterGender === 'male' && customer.gender !== 'male') return false;
       if (filterGender === 'female' && customer.gender !== 'female') return false;
     }
 
-    // 状态筛选
     if (filterStatus !== 'all' && customer.status !== filterStatus) {
       return false;
     }
@@ -122,169 +122,270 @@ export default function HomePage() {
     return true;
   });
 
+  // 计算统计数据
+  const stats = {
+    total: customers.length,
+    newCustomers: customers.filter(c => c.status === '新客户').length,
+    tracking: customers.filter(c => c.status === '跟踪中').length,
+    deals: customers.filter(c => c.status === '刚成交').length,
+  };
+
+  function getStatusBadgeVariant(status: string): "default" | "success" | "warning" | "destructive" | "outline" | "secondary" {
+    switch (status) {
+      case '刚成交': return 'success';
+      case '跟踪中': return 'warning';
+      case '已见面': return 'default';
+      case '已约平台': return 'default';
+      case '新客户': return 'secondary';
+      default: return 'secondary';
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">加载中...</div>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+          <p className="text-sm text-gray-500">加载中...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 顶部导航栏 */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center gap-8">
-          <Link
-            href="/"
-            onClick={() => {
-              setFilterGender('all');
-              setFilterStatus('all');
-              setSearch('');
-            }}
-            className="text-2xl font-bold text-gray-900 hover:text-gray-700"
-          >
-            保险销售追踪系统
-          </Link>
-          <Link href="/analytics" className="text-blue-600 hover:text-blue-800">
-            数据分析
-          </Link>
-          <div className="flex-1"></div>
-          <div className="flex items-center gap-4">
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="搜索客户姓名或手机号"
-                className="px-4 py-2 border border-gray-300 rounded-lg w-80"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              >
-                搜索
-              </button>
-            </form>
-            <Link
-              href="/customers/new"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              + 添加客户
-            </Link>
-          </div>
+    <div className="container space-y-8 px-6 py-8">
+      {/* 页面标题 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">客户列表</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            管理和追踪您的所有客户信息
+          </p>
         </div>
-      </nav>
-
-      {/* 客户列表区域 */}
-      <div className="p-6">
-        <div className="bg-white rounded-lg shadow">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">客户ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">姓名</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  <div className="flex flex-col">
-                    <span>性别</span>
-                    <select
-                      value={filterGender}
-                      onChange={(e) => setFilterGender(e.target.value)}
-                      className="mt-1 text-xs border border-gray-300 rounded px-2 py-1"
-                    >
-                      <option value="all">全部</option>
-                      <option value="male">男</option>
-                      <option value="female">女</option>
-                    </select>
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">年龄</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  <div className="flex flex-col">
-                    <span>状态</span>
-                    <select
-                      value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value)}
-                      className="mt-1 text-xs border border-gray-300 rounded px-2 py-1"
-                    >
-                      <option value="all">全部</option>
-                      <option value="刚成交">刚成交</option>
-                      <option value="跟踪中">跟踪中</option>
-                      <option value="已见面">已见面</option>
-                      <option value="已约平台">已约平台</option>
-                      <option value="新客户">新客户</option>
-                    </select>
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">手机号</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">成交次数</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">最后联系</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex gap-2">
-                      <Link
-                        href={`/customers/${customer.id}`}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        查看
-                      </Link>
-                      <Link
-                        href={`/customers/${customer.id}/edit`}
-                        className="text-green-600 hover:text-green-800"
-                      >
-                        编辑
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(customer.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        删除
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm text-gray-600">
-                    {formatCustomerId(customer.id)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                    {customer.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                    {customer.gender === 'male' ? '男' : customer.gender === 'female' ? '女' : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                    {customer.birthday ? calculateAge(customer.birthday) + '岁' : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(customer.status)}`}>
-                      {customer.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                    {customer.phone || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                    {customer.deal_count} 次
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                    {customer.last_contact || '无记录'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filteredCustomers.length === 0 && (
-            <div className="text-center py-12 text-gray-500">暂无符合条件的客户数据</div>
-          )}
-          {customers.length > 0 && filteredCustomers.length === 0 && (
-            <div className="text-center py-4 text-sm text-gray-400">提示：调整筛选条件以查看更多客户</div>
-          )}
-        </div>
+        <Link href="/customers/new">
+          <Button size="lg" className="gap-2">
+            <Plus className="h-5 w-5" />
+            添加客户
+          </Button>
+        </Link>
       </div>
+
+      {/* 统计卡片 */}
+      <div className="grid gap-6 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              总客户数
+            </CardTitle>
+            <Users className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
+            <p className="mt-1 text-xs text-gray-500">所有客户</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              新客户
+            </CardTitle>
+            <UserPlus className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-600">{stats.newCustomers}</div>
+            <p className="mt-1 text-xs text-gray-500">待跟进</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              跟踪中
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-yellow-600">{stats.tracking}</div>
+            <p className="mt-1 text-xs text-gray-500">正在跟进</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              已成交
+            </CardTitle>
+            <CheckCircle className="h-4 w-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600">{stats.deals}</div>
+            <p className="mt-1 text-xs text-gray-500">成功成交</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 搜索和筛选 */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            {/* 搜索框 */}
+            <form onSubmit={handleSearch} className="flex flex-1 gap-2">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  type="text"
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="搜索客户姓名或手机号..."
+                  className="pl-10"
+                />
+              </div>
+              <Button type="submit" variant="outline">
+                搜索
+              </Button>
+            </form>
+
+            {/* 筛选器 */}
+            <div className="flex items-center gap-3">
+              <Filter className="h-4 w-4 text-gray-400" />
+              <select
+                value={filterGender}
+                onChange={(e) => setFilterGender(e.target.value)}
+                className="h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                <option value="all">全部性别</option>
+                <option value="male">男</option>
+                <option value="female">女</option>
+              </select>
+
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                <option value="all">全部状态</option>
+                <option value="刚成交">刚成交</option>
+                <option value="跟踪中">跟踪中</option>
+                <option value="已见面">已见面</option>
+                <option value="已约平台">已约平台</option>
+                <option value="新客户">新客户</option>
+              </select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 客户列表 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>客户列表</CardTitle>
+          <CardDescription>
+            共 {filteredCustomers.length} 位客户
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-6 py-3">客户信息</th>
+                  <th className="px-6 py-3">性别</th>
+                  <th className="px-6 py-3">年龄</th>
+                  <th className="px-6 py-3">状态</th>
+                  <th className="px-6 py-3">联系方式</th>
+                  <th className="px-6 py-3">成交次数</th>
+                  <th className="px-6 py-3">最后联系</th>
+                  <th className="px-6 py-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCustomers.map((customer) => (
+                  <tr
+                    key={customer.id}
+                    className="border-b border-gray-100 transition-colors hover:bg-gray-50/50"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
+                          {customer.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">{customer.name}</div>
+                          <div className="text-xs text-gray-500">{formatCustomerId(customer.id)}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {customer.gender === 'male' ? '男' : customer.gender === 'female' ? '女' : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {customer.birthday ? calculateAge(customer.birthday) + '岁' : '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant={getStatusBadgeVariant(customer.status)}>
+                        {customer.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Phone className="h-3 w-3" />
+                        {customer.phone || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      {customer.deal_count} 次
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {customer.last_contact || '无记录'}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/customers/${customer.id}`}>
+                          <Button size="sm" variant="ghost" className="gap-1">
+                            <Eye className="h-3 w-3" />
+                            查看
+                          </Button>
+                        </Link>
+                        <Link href={`/customers/${customer.id}/edit`}>
+                          <Button size="sm" variant="ghost" className="gap-1">
+                            <Edit className="h-3 w-3" />
+                            编辑
+                          </Button>
+                        </Link>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDelete(customer.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          删除
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {filteredCustomers.length === 0 && (
+              <div className="py-12 text-center">
+                <p className="text-sm text-gray-500">暂无符合条件的客户数据</p>
+              </div>
+            )}
+
+            {customers.length > 0 && filteredCustomers.length === 0 && (
+              <div className="py-4 text-center">
+                <p className="text-sm text-gray-400">提示：调整筛选条件以查看更多客户</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+// 添加缺失的图标导入
+import { Users, UserPlus, TrendingUp, CheckCircle } from 'lucide-react';

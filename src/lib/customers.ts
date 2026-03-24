@@ -117,6 +117,7 @@ export async function getCustomerWithStats(id: number): Promise<CustomerWithStat
     ...formatCustomerData(customer),
     deal_count,
     status,
+    last_contact: customer.last_contact || null,
   };
 }
 
@@ -139,6 +140,7 @@ export async function getAllCustomersWithStats(): Promise<CustomerWithStats[]> {
       ...formatCustomerData(customer),
       deal_count,
       status,
+      last_contact: customer.last_contact || null,
     };
   });
 }

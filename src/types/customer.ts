@@ -23,17 +23,15 @@ export interface CustomerWithStats extends Customer {
 
 export interface CreateCustomerInput {
   name: string;
-  gender?: 'male' | 'female';
-  phone?: string;
-  address?: string;
-  birthday?: string;
-  occupation?: string;
-  family_info?: string;
+  gender?: 'male' | 'female' | null;
+  phone?: string | null;
+  address?: string | null;
+  birthday?: string | null;
+  occupation?: string | null;
+  family_info?: string | null;
   source: 'orphan' | 'referral' | 'self';
-  was_referred_by?: number;
-  notes?: string;
+  was_referred_by?: number | null;
+  notes?: string | null;
 }
 
-export interface UpdateCustomerInput extends Partial<CreateCustomerInput> {
-  id: number;
-}
+export interface UpdateCustomerInput extends Partial<CreateCustomerInput> {}

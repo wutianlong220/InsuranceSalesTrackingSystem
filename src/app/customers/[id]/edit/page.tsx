@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Customer } from '@/types/customer';
 import { formatCustomerId } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, User, Phone, Cake, Briefcase, MapPin, FileText, Search } from 'lucide-react';
 
 interface CustomerWithStats extends Customer {
   deal_count: number;
@@ -46,7 +52,6 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
         setSelectedReferrer(data.referrer.id.toString());
         setSearchTerm(`${formatCustomerId(data.referrer.id)} ${data.referrer.name}`);
       } else if (data.was_referred_by) {
-        // 如果只有推荐人ID，设置ID但搜索框暂时为空
         setSelectedReferrer(data.was_referred_by.toString());
       }
     } catch (error) {
@@ -78,10 +83,10 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
     }
   }
 
-  const filteredCustomers = allCustomers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.includes(searchTerm) ||
-    formatCustomerId(customer.id).includes(searchTerm)
+  const filteredCustomers = allCustomers.filter(c =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.phone?.includes(searchTerm) ||
+    formatCustomerId(c.id).includes(searchTerm)
   );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -112,10 +117,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
       if (res.ok) {
         router.push(`/customers/${id}`);
       } else {
-        // 尝试解析错误信息
         const errorData = await res.json().catch(() => ({ error: '更新失败' }));
-
-        // 显示具体的错误信息
         if (errorData.error) {
           alert(errorData.error);
         } else {
@@ -131,275 +133,358 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   }
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">加载中...</div>;
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+          <p className="text-sm text-gray-500">加载中...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!customer) {
-    return <div className="min-h-screen flex items-center justify-center">客户不存在</div>;
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <p className="text-lg font-medium text-gray-900">客户不存在</p>
+            <p className="mt-2 text-sm text-gray-500">未找到该客户信息</p>
+            <Link href="/" className="mt-4 inline-block">
+              <Button>返回列表</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href={`/customers/${id}`} className="text-gray-600 hover:text-gray-900">
-              ← 返回详情
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">编辑客户</h1>
-          </div>
+    <div className="container max-w-4xl space-y-6 px-6 py-8">
+      {/* 页面头部 */}
+      <div className="flex items-center gap-4">
+        <Link href={`/customers/${id}`}>
+          <Button variant="ghost" size="sm" className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            返回详情
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">编辑客户信息</h1>
+          <p className="text-sm text-gray-500">修改客户的基本信息和详细资料</p>
         </div>
-      </nav>
+      </div>
 
-      <div className="max-w-2xl mx-auto py-8 px-4">
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-8 space-y-6">
-          <div>
-            <h2 className="text-lg font-semibold mb-4">基本信息</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* 基本信息 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              基本信息
+            </CardTitle>
+            <CardDescription>必填项请务必填写完整</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="name">
                   姓名 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
+                </Label>
+                <Input
+                  id="name"
                   name="name"
+                  type="text"
                   required
                   defaultValue={customer.name}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="请输入客户姓名"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  性别
-                </label>
+              <div className="space-y-2">
+                <Label htmlFor="gender">性别</Label>
                 <div className="flex gap-6">
-                  <label className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="gender"
                       value="male"
                       checked={gender === 'male'}
                       onChange={(e) => setGender(e.target.value)}
-                      className="text-blue-600"
+                      className="h-4 w-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
                     />
-                    <span>男</span>
+                    <span className="text-sm">男</span>
                   </label>
-                  <label className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="gender"
                       value="female"
                       checked={gender === 'female'}
                       onChange={(e) => setGender(e.target.value)}
-                      className="text-blue-600"
+                      className="h-4 w-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
                     />
-                    <span>女</span>
+                    <span className="text-sm">女</span>
                   </label>
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
                   手机号
-                </label>
-                <input
-                  type="tel"
+                </Label>
+                <Input
+                  id="phone"
                   name="phone"
+                  type="tel"
                   defaultValue={customer.phone || ''}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="请输入手机号码"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="space-y-2">
+                <Label htmlFor="birthday" className="flex items-center gap-2">
+                  <Cake className="h-4 w-4" />
                   生日
-                </label>
-                <input
-                  type="date"
+                </Label>
+                <Input
+                  id="birthday"
                   name="birthday"
+                  type="date"
                   defaultValue={customer.birthday || ''}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  职业
-                </label>
-                <input
-                  type="text"
-                  name="occupation"
-                  defaultValue={customer.occupation || ''}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
-          </div>
 
-          <div>
-            <h2 className="text-lg font-semibold mb-4">客户来源</h2>
             <div className="space-y-2">
-              <label className="flex items-center gap-2">
+              <Label htmlFor="occupation" className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4" />
+                职业
+              </Label>
+              <Input
+                id="occupation"
+                name="occupation"
+                type="text"
+                defaultValue={customer.occupation || ''}
+                placeholder="请输入职业"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 客户来源 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>客户来源</CardTitle>
+            <CardDescription>选择该客户的获取渠道</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3">
+              <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
+                customerSource === 'orphan'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:bg-gray-50'
+              }`}>
                 <input
                   type="radio"
                   name="source"
                   value="orphan"
                   required
-                  defaultChecked={customer.source === 'orphan'}
+                  checked={customerSource === 'orphan'}
                   onChange={(e) => setCustomerSource(e.target.value)}
-                  className="text-blue-600"
+                  className="h-4 w-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
                 />
-                <span>孤儿保单（公司分配）</span>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">孤儿保单（公司分配）</p>
+                  <p className="text-sm text-gray-500">由公司分配的存量客户</p>
+                </div>
               </label>
-              <label className="flex items-center gap-2">
+
+              <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
+                customerSource === 'referral'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:bg-gray-50'
+              }`}>
                 <input
                   type="radio"
                   name="source"
                   value="referral"
-                  defaultChecked={customer.source === 'referral'}
+                  checked={customerSource === 'referral'}
                   onChange={(e) => setCustomerSource(e.target.value)}
-                  className="text-blue-600"
+                  className="h-4 w-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
                 />
-                <span>客户推荐</span>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">客户推荐</p>
+                  <p className="text-sm text-gray-500">由现有客户推荐的新客户</p>
+                </div>
               </label>
-              <label className="flex items-center gap-2">
+
+              <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
+                customerSource === 'self'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:bg-gray-50'
+              }`}>
                 <input
                   type="radio"
                   name="source"
                   value="self"
-                  defaultChecked={customer.source === 'self'}
+                  checked={customerSource === 'self'}
                   onChange={(e) => setCustomerSource(e.target.value)}
-                  className="text-blue-600"
+                  className="h-4 w-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
                 />
-                <span>自主开发</span>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">自主开发</p>
+                  <p className="text-sm text-gray-500">自主开发的新客户</p>
+                </div>
               </label>
             </div>
 
-            {/* 推荐人选择器 - 仅当选择"客户推荐"时显示 */}
+            {/* 推荐人选择器 */}
             {customerSource === 'referral' && (
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  搜索推荐人
-                </label>
+              <div className="mt-4 space-y-2 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <Label className="flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  搜索推荐人 <span className="text-red-500">*</span>
+                </Label>
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="输入姓名或手机号搜索..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      const newValue = e.target.value;
-                      setSearchTerm(newValue);
-                      // 如果用户修改了搜索框内容，清除之前选择的推荐人
-                      if (selectedReferrer && newValue !== searchTerm) {
-                        setSelectedReferrer('');
-                      }
-                    }}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <div className="relative flex-1">
+                    <Input
+                      placeholder="输入姓名或手机号搜索..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        setSearchTerm(newValue);
+                        if (selectedReferrer && newValue !== searchTerm) {
+                          setSelectedReferrer('');
+                        }
+                      }}
+                    />
+                  </div>
                   {selectedReferrer && (
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
                       onClick={() => {
                         setSelectedReferrer('');
                         setSearchTerm('');
                       }}
-                      className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 underline"
                     >
                       清除
-                    </button>
+                    </Button>
                   )}
                 </div>
-                {/* 只在搜索中且没有选择推荐人时显示搜索结果 */}
+
+                {/* 搜索结果 */}
                 {searchTerm && !selectedReferrer && (
-                  <div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto">
+                  <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white">
                     {filteredCustomers.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">未找到匹配的客户</div>
-                    ) : (
-                      filteredCustomers.map((customer) => (
-                        <div
-                          key={customer.id}
-                          onClick={() => {
-                            setSelectedReferrer(customer.id.toString());
-                            setSearchTerm(`${formatCustomerId(customer.id)} ${customer.name}`);
-                          }}
-                          className={`px-4 py-3 border-b border-gray-200 cursor-pointer hover:bg-blue-50 ${
-                            selectedReferrer === customer.id.toString() ? 'bg-blue-100' : ''
-                          }`}
-                      >
-                        <div className="font-medium text-gray-900">
-                          {formatCustomerId(customer.id)} {customer.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {customer.phone || '无手机号'}
-                        </div>
+                      <div className="p-4 text-center text-sm text-gray-500">
+                        未找到匹配的客户
                       </div>
-                    ))
-                  )}
-                </div>
+                    ) : (
+                      filteredCustomers.map((c) => (
+                        <div
+                          key={c.id}
+                          onClick={() => {
+                            setSelectedReferrer(c.id.toString());
+                            setSearchTerm(`${formatCustomerId(c.id)} ${c.name}`);
+                          }}
+                          className={`cursor-pointer border-b border-gray-100 px-4 py-3 last:border-0 hover:bg-blue-50 ${
+                            selectedReferrer === c.id.toString() ? 'bg-blue-100' : ''
+                          }`}
+                        >
+                          <div className="font-medium text-gray-900">
+                            {formatCustomerId(c.id)} {c.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {c.phone || '无手机号'}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
+
+                {selectedReferrer && (
+                  <div className="mt-2 rounded-md bg-green-50 p-3 text-sm text-green-700">
+                    ✓ 已选择推荐人
+                  </div>
+                )}
+
+                <input
+                  type="hidden"
+                  name="was_referred_by"
+                  value={selectedReferrer}
+                  required={customerSource === 'referral'}
+                />
               </div>
             )}
-          </div>
+          </CardContent>
+        </Card>
 
-          <div>
-            <h2 className="text-lg font-semibold mb-4">其他信息</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  地址
-                </label>
-                <textarea
-                  name="address"
-                  rows={2}
-                  defaultValue={customer.address || ''}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  家庭情况
-                </label>
-                <textarea
-                  name="family_info"
-                  rows={2}
-                  defaultValue={customer.family_info || ''}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  备注
-                </label>
-                <textarea
-                  name="notes"
-                  rows={3}
-                  defaultValue={customer.notes || ''}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+        {/* 其他信息 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              其他信息
+            </CardTitle>
+            <CardDescription>可选信息，可稍后补充</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="address" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                地址
+              </Label>
+              <Textarea
+                id="address"
+                name="address"
+                rows={2}
+                defaultValue={customer.address || ''}
+                placeholder="请输入地址"
+              />
             </div>
-          </div>
 
-          <div className="flex gap-4 pt-4 border-t border-gray-200">
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? '保存中...' : '保存客户'}
-            </button>
-            <Link
-              href={`/customers/${id}`}
-              className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-center"
-            >
+            <div className="space-y-2">
+              <Label htmlFor="family_info">家庭情况</Label>
+              <Textarea
+                id="family_info"
+                name="family_info"
+                rows={2}
+                defaultValue={customer.family_info || ''}
+                placeholder="例如：已婚，有一子"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">备注</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                rows={3}
+                defaultValue={customer.notes || ''}
+                placeholder="其他备注信息..."
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 操作按钮 */}
+        <div className="flex items-center justify-end gap-4 border-t border-gray-200 pt-6">
+          <Link href={`/customers/${id}`}>
+            <Button type="button" variant="outline" size="lg">
               取消
-            </Link>
-          </div>
-        </form>
-      </div>
+            </Button>
+          </Link>
+          <Button type="submit" size="lg" disabled={saving} className="min-w-[120px]">
+            {saving ? '保存中...' : '保存更改'}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
