@@ -6,7 +6,13 @@ import { z } from 'zod';
 export const CreateCustomerSchema = z.object({
   name: z.string().min(1, '姓名不能为空').max(100, '姓名不能超过100个字符'),
   gender: z.enum(['male', 'female']).nullable().optional(),
-  phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确').nullable().optional(),
+  phone: z.string()
+    .transform((val) => val === '' ? null : val)
+    .nullable()
+    .optional()
+    .refine((val) => val === null || /^1[3-9]\d{9}$/.test(val), {
+      message: '手机号格式不正确'
+    }),
   address: z.string().max(500, '地址不能超过500个字符').nullable().optional(),
   birthday: z.string()
     .transform((val) => val === '' ? null : val)
