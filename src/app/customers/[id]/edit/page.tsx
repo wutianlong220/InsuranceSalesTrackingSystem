@@ -84,9 +84,10 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   }
 
   const filteredCustomers = allCustomers.filter(c =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.phone?.includes(searchTerm) ||
-    formatCustomerId(c.id).includes(searchTerm)
+    c.id !== parseInt(id) && // 排除当前正在编辑的客户
+    (c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     c.phone?.includes(searchTerm) ||
+     formatCustomerId(c.id).includes(searchTerm))
   );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
